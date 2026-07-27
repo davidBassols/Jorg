@@ -1,0 +1,10 @@
+{
+  "name": "dnd-character-sheet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline Dungeons & Dragons character sheet (Level 4 Artificer / Battle Smith)",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  }
+}

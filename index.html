@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-background">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10231a" />
+    <title>D&D Character Sheet</title>
+    <meta name="description" content="Offline Dungeons & Dragons character sheet with live modifiers, combat, spells and features." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- Header -->
+      <header class="sheet-header">
+        <div>
+          <h1 id="charName">Character</h1>
+          <div class="subtitle" id="charSubtitle"></div>
+        </div>
+        <div class="header-badges" id="headerBadges"></div>
+      </header>
+
+      <!-- Tabs -->
+      <nav class="tabs" role="tablist" aria-label="Character sections">
+        <button class="tab active" data-tab="overview" role="tab">Atributos</button>
+        <button class="tab" data-tab="combat" role="tab">Combate</button>
+        <button class="tab" data-tab="spells" role="tab">Hechizos</button>
+        <button class="tab" data-tab="features" role="tab">Rasgos</button>
+      </nav>
+
+      <!-- Overview / Attributes -->
+      <section class="panel active" id="overview" role="tabpanel">
+        <div class="card">
+          <h2>Atributos</h2>
+          <div class="abilities-grid" id="abilitiesGrid"></div>
+        </div>
+
+        <div class="grid cols-2 section-gap">
+          <div class="card">
+            <h2>Tiradas de salvación</h2>
+            <ul class="stat-list" id="savesList"></ul>
+          </div>
+          <div class="card">
+            <h2>Habilidades</h2>
+            <ul class="stat-list" id="skillsList"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Combat -->
+      <section class="panel" id="combat" role="tabpanel">
+        <div class="combat-top">
+          <div class="stat-box">
+            <div class="big" id="acValue">10</div>
+            <div class="cap">Clase de armadura</div>
+          </div>
+          <div class="stat-box">
+            <div class="big" id="initValue">+0</div>
+            <div class="cap">Iniciativa</div>
+          </div>
+          <div class="stat-box">
+            <div class="big" id="speedValue">30</div>
+            <div class="cap">Velocidad (ft)</div>
+          </div>
+          <div class="stat-box">
+            <div class="big" id="pbValue">+2</div>
+            <div class="cap">Bonificación por competencia</div>
+          </div>
+        </div>
+
+        <div class="grid cols-2">
+          <div class="card">
+            <h2>Armadura &amp; Escudo</h2>
+            <label class="cap" for="armorSelect">Armadura</label>
+            <select id="armorSelect"></select>
+            <label class="cap" for="shieldSelect" style="display:block;margin-top:10px;">Escudo</label>
+            <select id="shieldSelect"></select>
+            <p class="hint" id="acBreakdown"></p>
+          </div>
+
+          <div class="card">
+            <h2>Hit Points</h2>
+            <div class="hp-numbers">
+              <span id="hpCurrent">0</span> / <span id="hpMax">0</span>
+              <span class="temp" id="hpTemp"></span>
+            </div>
+            <div class="hp-bar-outer"><div class="hp-bar-inner" id="hpBar"></div></div>
+            <div class="hp-controls">
+              <input type="range" id="hpSlider" min="0" max="10" value="0" aria-label="Current hit points" />
+            </div>
+            <div class="hp-controls">
+              <input type="number" id="hpAmount" value="1" min="1" aria-label="Amount" />
+              <button class="btn danger" id="hpDamage">− Damage</button>
+              <button class="btn heal" id="hpHeal">+ Heal</button>
+            </div>
+            <div class="hp-controls">
+              <input type="number" id="tempAmount" value="0" min="0" aria-label="Temp HP" />
+              <button class="btn" id="setTemp">Set Temp HP</button>
+              <button class="btn gold" id="hpFull">Full Rest</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section-gap">
+          <h2>Weapons &amp; Attacks</h2>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Weapon</th>
+                  <th>Attack</th>
+                  <th>Damage</th>
+                  <th>Range</th>
+                  <th>Properties</th>
+                </tr>
+              </thead>
+              <tbody id="weaponsBody"></tbody>
+            </table>
+          </div>
+          <p class="hint">Attack bonus = ability modifier + proficiency (if proficient) + magic bonus. Battle Smith magic weapons use Intelligence.</p>
+        </div>
+      </section>
+
+      <!-- Spells -->
+      <section class="panel" id="spells" role="tabpanel">
+        <div class="combat-top">
+          <div class="stat-box">
+            <div class="big" id="spellDC">10</div>
+            <div class="cap">Spell Save DC</div>
+          </div>
+          <div class="stat-box">
+            <div class="big" id="spellAtk">+0</div>
+            <div class="cap">Spell Attack</div>
+          </div>
+          <div class="stat-box">
+            <div class="big" id="spellAbility">INT</div>
+            <div class="cap">Casting Ability</div>
+          </div>
+          <div class="stat-box">
+            <div class="big" id="preparedCount">0</div>
+            <div class="cap">Prepared</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Spell Slots</h2>
+          <div id="slotsContainer"></div>
+          <button class="btn" id="resetSlots" style="margin-top:8px;">Reset Slots (Long Rest)</button>
+        </div>
+
+        <div class="card section-gap">
+          <h2>Cantrips</h2>
+          <div class="spell-list" id="cantripList"></div>
+        </div>
+
+        <div class="card section-gap" id="spellsByLevel"></div>
+        <p class="hint">Tap any spell to see its full description.</p>
+      </section>
+
+      <!-- Features -->
+      <section class="panel" id="features" role="tabpanel">
+        <div class="card">
+          <h2>Class Features &amp; Perks</h2>
+          <div id="featuresList"></div>
+        </div>
+
+        <div class="card defender section-gap" id="defenderCard">
+          <h2 id="defenderName">Steel Defender</h2>
+          <div class="def-stats" id="defenderStats"></div>
+          <div id="defenderMeta"></div>
+          <div class="section-gap" id="defenderTraits"></div>
+          <div class="section-gap" id="defenderActions"></div>
+        </div>
+      </section>
+
+      <footer class="hint" style="text-align:center;padding:20px 0;">
+        Edit <code>character-data.js</code> to change your character. Works fully offline — just open index.html.
+      </footer>
+    </div>
+
+    <!-- Modal for spell / detail popups -->
+    <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
+      <div class="modal" id="modalContent"></div>
+    </div>
+
+    <script src="character-data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
