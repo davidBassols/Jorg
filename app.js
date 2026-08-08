@@ -23,6 +23,7 @@
   let tempHp = 0
   let equippedArmorIndex = (C.armor || []).findIndex((a) => a.equipped)
   let equippedShieldIndex = (C.shields || []).findIndex((s) => s.equipped)
+  let activeSpellLevel = 0
 
   loadState()
 
@@ -62,6 +63,20 @@
       if (typeof s.currentHp === "number") currentHp = s.currentHp
       if (typeof s.tempHp === "number") tempHp = s.tempHp
       if (s.usedSlots) Object.assign(usedSlots, s.usedSlots)
+      if (Array.isArray(s.preparedSpells)) {
+        const preparedKeys = new Set(s.preparedSpells)
+        ;(C.spells || []).forEach((sp) => {
+          if (!sp.alwaysPrepared) {
+            sp.prepared = preparedKeys.has(`${sp.level}:${sp.name}`)
+          }
+        })
+      }
+      if (Array.isArray(s.knownMagicItemPlans)) {
+        const knownKeys = new Set(s.knownMagicItemPlans)
+        ;(C.magicItemPlans || []).forEach((plan) => {
+          plan.known = knownKeys.has(plan.name)
+        })
+      }
     } catch (e) {
       console.log("[v0] Could not load saved state:", e.message)
     }
@@ -69,7 +84,13 @@
 
   function saveState() {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ currentHp, tempHp, usedSlots }))
+      const preparedSpells = (C.spells || [])
+        .filter((sp) => sp.prepared && !sp.alwaysPrepared)
+        .map((sp) => `${sp.level}:${sp.name}`)
+      const knownMagicItemPlans = (C.magicItemPlans || [])
+        .filter((plan) => plan.known)
+        .map((plan) => plan.name)
+      localStorage.setItem(STORE_KEY, JSON.stringify({ currentHp, tempHp, usedSlots, preparedSpells, knownMagicItemPlans }))
     } catch (e) {
       console.log("[v0] Could not save state:", e.message)
     }
@@ -77,7 +98,7 @@
 
   /* ---------- Header ---------- */
   function renderHeader() {
-    document.getElementById("charName").textContent = C.name || "Character"
+    document.getElementById("charName").textContent = C.name || "Personaje"
     document.getElementById("charSubtitle").textContent =
       [C.race, C.background, C.alignment].filter(Boolean).join(" • ")
     const badges = document.getElementById("headerBadges")
@@ -187,7 +208,7 @@
   function renderGearSelectors() {
     const armorSel = document.getElementById("armorSelect")
     const shieldSel = document.getElementById("shieldSelect")
-    armorSel.innerHTML = '<option value="-1">None (Unarmored)</option>'
+    armorSel.innerHTML = '<option value="-1">Ninguna (sin armadura)</option>'
     ;(C.armor || []).forEach((a, i) => {
       const opt = document.createElement("option")
       opt.value = i
@@ -195,7 +216,7 @@
       if (i === equippedArmorIndex) opt.selected = true
       armorSel.appendChild(opt)
     })
-    shieldSel.innerHTML = '<option value="-1">None</option>'
+    shieldSel.innerHTML = '<option value="-1">Ninguno</option>'
     ;(C.shields || []).forEach((s, i) => {
       const opt = document.createElement("option")
       opt.value = i
@@ -240,7 +261,7 @@
         <td>
           <strong>${w.name}</strong>
           <div class="s-meta" style="font-size:.72rem;color:var(--muted)">
-            ${abil.key.toUpperCase()}${w.useIntForAttack ? " (Battle Ready)" : ""}${w.proficient ? " • proficient" : ""}
+            ${abil.key.toUpperCase()}${w.useIntForAttack ? " (Preparado para la batalla)" : ""}${w.proficient ? " · competente" : ""}
           </div>
         </td>
         <td><span class="attack">${fmt(attack)}</span></td>
@@ -306,23 +327,93 @@
   }
 
   /* ---------- Spells ---------- */
-  function renderSpellStats() {
+  const ARTIFICER_PREPARED_BY_LEVEL = {
+    1: 2, 2: 3, 3: 4, 4: 5, 5: 6,
+    6: 6, 7: 7, 8: 7, 9: 9, 10: 9,
+    11: 10, 12: 10, 13: 11, 14: 11, 15: 12,
+    16: 12, 17: 14, 18: 14, 19: 15, 20: 15,
+  }
+
+  const ARTIFICER_CANTRIPS_BY_LEVEL = {
+    1: 2, 2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 2, 8: 2, 9: 2,
+    10: 3, 11: 3, 12: 3, 13: 3, 14: 4, 15: 4, 16: 4, 17: 4,
+    18: 4, 19: 4, 20: 4,
+  }
+
+  function getMaxPrepared() {
+    const level = Math.max(1, Math.min(20, Number(C.level) || 1))
+    return ARTIFICER_PREPARED_BY_LEVEL[level] || 0
+  }
+
+  function getMaxCantrips() {
+    const level = Math.max(1, Math.min(20, Number(C.level) || 1))
+    return ARTIFICER_CANTRIPS_BY_LEVEL[level] || 0
+  }
+
+  const ARTIFICER_SPELL_SLOTS_BY_LEVEL = {
+    1: {1: 2}, 2: {1: 2}, 3: {1: 3}, 4: {1: 3},
+    5: {1: 4, 2: 2}, 6: {1: 4, 2: 2}, 7: {1: 4, 2: 3}, 8: {1: 4, 2: 3},
+    9: {1: 4, 2: 3, 3: 2}, 10: {1: 4, 2: 3, 3: 2}, 11: {1: 4, 2: 3, 3: 3},
+    12: {1: 4, 2: 3, 3: 3}, 13: {1: 4, 2: 3, 3: 3, 4: 1},
+    14: {1: 4, 2: 3, 3: 3, 4: 1}, 15: {1: 4, 2: 3, 3: 3, 4: 2},
+    16: {1: 4, 2: 3, 3: 3, 4: 2}, 17: {1: 4, 2: 3, 3: 3, 4: 3, 5: 1},
+    18: {1: 4, 2: 3, 3: 3, 4: 3, 5: 1}, 19: {1: 4, 2: 3, 3: 3, 4: 3, 5: 2},
+    20: {1: 4, 2: 3, 3: 3, 4: 3, 5: 2},
+  }
+
+  function getSpellSlots() {
+    const level = Math.max(1, Math.min(20, Number(C.level) || 1))
+    return ARTIFICER_SPELL_SLOTS_BY_LEVEL[level] || {}
+  }
+
+  function getHighestSpellSlotLevel() {
+    const slots = getSpellSlots()
+    const levels = Object.keys(slots).map(Number).filter((n) => n > 0 && Number(slots[n]) > 0)
+    return levels.length ? Math.max(...levels) : 0
+  }
+
+  function getPreparedCount() {
+    const maxLevel = getHighestSpellSlotLevel()
+    return (C.spells || []).filter((s) => Number(s.level) > 0 && Number(s.level) <= maxLevel && s.prepared && !s.alwaysPrepared).length
+  }
+
+  function getAvailableSpellsByLevel() {
+    const maxLevel = getHighestSpellSlotLevel()
+    const byLevel = {}
+    if (Array.isArray(C.cantrips) && C.cantrips.length) {
+      byLevel[0] = C.cantrips
+    }
+    ;(C.spells || []).forEach((sp) => {
+      const level = Number(sp.level || 1)
+      if (level > 0 && level <= maxLevel && (!sp.minArtificerLevel || Number(C.level) >= Number(sp.minArtificerLevel))) {
+        byLevel[level] = byLevel[level] || []
+        byLevel[level].push(sp)
+      }
+    })
+    return byLevel
+  }
+
+function renderSpellStats() {
     const abil = C.spellcasting ? C.spellcasting.ability : "int"
     const spellMod = mod(abilities[abil])
     document.getElementById("spellDC").textContent = 8 + pb + spellMod
     document.getElementById("spellAtk").textContent = fmt(pb + spellMod)
     document.getElementById("spellAbility").textContent = abil.toUpperCase()
-    const prepared = (C.spells || []).filter((s) => s.prepared).length + (C.cantrips || []).length
-    document.getElementById("preparedCount").textContent = prepared
+    const prepared = getPreparedCount()
+    const alwaysPrepared = (C.spells || []).filter((s) => {
+      const level = Number(s.level || 0)
+      return level > 0 && level <= getHighestSpellSlotLevel() && s.alwaysPrepared
+    }).length
+    document.getElementById("preparedCount").textContent = `${prepared + alwaysPrepared}/${getMaxPrepared() + alwaysPrepared}`
   }
 
   function renderSlots() {
     const container = document.getElementById("slotsContainer")
     container.innerHTML = ""
-    const slots = (C.spellcasting && C.spellcasting.spellSlots) || {}
+    const slots = getSpellSlots()
     const levels = Object.keys(slots).sort()
     if (levels.length === 0) {
-      container.innerHTML = '<p class="hint">No leveled spell slots.</p>'
+      container.innerHTML = '<p class="hint">No tienes espacios de conjuro disponibles.</p>'
       return
     }
     levels.forEach((lvl) => {
@@ -332,12 +423,12 @@
       row.className = "spell-slots"
       const label = document.createElement("span")
       label.className = "pill"
-      label.textContent = `Level ${lvl}`
+      label.textContent = `Nivel ${lvl}`
       row.appendChild(label)
       for (let i = 0; i < total; i++) {
         const pip = document.createElement("button")
         pip.className = "slot-pip" + (i < used ? " used" : "")
-        pip.setAttribute("aria-label", `Level ${lvl} slot ${i + 1}`)
+        pip.setAttribute("aria-label", `Espacio de nivel ${lvl}, ${i + 1}`)
         pip.addEventListener("click", () => {
           // clicking pip i toggles used count to i+1, or clears if already there
           const newUsed = usedSlots[lvl] === i + 1 ? i : i + 1
@@ -349,60 +440,155 @@
       }
       const count = document.createElement("span")
       count.className = "s-meta"
-      count.textContent = `${total - used}/${total} left`
+      count.textContent = `${total - used}/${total} disponibles`
       row.appendChild(count)
       container.appendChild(row)
     })
   }
 
   function spellItem(sp) {
-    const btn = document.createElement("button")
-    btn.className = "spell-item"
-    const metaParts = [sp.school, sp.castingTime, sp.range].filter(Boolean)
-    const preparedPill = sp.level === 0
-      ? '<span class="pill">Cantrip</span>'
-      : sp.prepared
-        ? `<span class="pill">${sp.alwaysPrepared ? "Always Prepared" : "Prepared"}</span>`
-        : '<span class="pill muted">Known</span>'
-    btn.innerHTML = `
+    const wrapper = document.createElement("div")
+    wrapper.className = "spell-item" + (sp.prepared ? " prepared" : "")
+
+    const metaParts = [sp.subclass || "", sp.school, sp.castingTime, sp.range].filter(Boolean)
+    const info = document.createElement("button")
+    info.type = "button"
+    info.className = "spell-info"
+    info.innerHTML = `
       <span>
         <span class="s-name">${sp.name}</span>
-        <div class="s-meta">${metaParts.join(" • ")}</div>
-      </span>
-      ${preparedPill}`
-    btn.addEventListener("click", () => openSpellModal(sp))
-    return btn
+        <span class="s-meta">${metaParts.join(" • ")}</span>
+      </span>`
+    info.addEventListener("click", () => openSpellModal(sp))
+
+    const action = document.createElement("button")
+    action.type = "button"
+    action.className = "spell-toggle"
+    if (sp.level === 0) {
+      action.textContent = sp.known ? "Conocido" : "No conocido"
+      action.disabled = true
+    } else {
+      action.textContent = sp.alwaysPrepared ? "Siempre" : (sp.prepared ? "Preparado" : "Preparar")
+      action.setAttribute("aria-pressed", sp.prepared ? "true" : "false")
+      if (sp.alwaysPrepared) {
+        action.disabled = true
+      } else {
+        action.addEventListener("click", (e) => {
+          e.stopPropagation()
+          togglePreparedSpell(sp)
+        })
+      }
+    }
+
+    wrapper.appendChild(info)
+    wrapper.appendChild(action)
+    return wrapper
+  }
+
+  function togglePreparedSpell(sp) {
+    if (sp.prepared) {
+      sp.prepared = false
+      renderSpells()
+      renderSpellStats()
+      saveState()
+      return
+    }
+
+    const maxPrepared = getMaxPrepared()
+    const currentPrepared = getPreparedCount()
+    if (currentPrepared >= maxPrepared) {
+      openTextModal(
+        "Límite de preparados",
+        `${currentPrepared}/${maxPrepared} conjuros preparados`,
+        `No puedes preparar más conjuros. Desprepara uno de los actuales antes de preparar <strong>${sp.name}</strong>.`
+      )
+      return
+    }
+
+    sp.prepared = true
+    renderSpells()
+    renderSpellStats()
+    saveState()
   }
 
   function renderSpells() {
-    // cantrips
-    const cList = document.getElementById("cantripList")
-    cList.innerHTML = ""
-    ;(C.cantrips || []).forEach((sp) => cList.appendChild(spellItem(sp)))
-
-    // leveled spells grouped
     const container = document.getElementById("spellsByLevel")
     container.innerHTML = ""
-    const byLevel = {}
-    ;(C.spells || []).forEach((sp) => {
-      const l = sp.level || 1
-      byLevel[l] = byLevel[l] || []
-      byLevel[l].push(sp)
-    })
-    const levels = Object.keys(byLevel).sort()
+
+    const byLevel = getAvailableSpellsByLevel()
+    const levels = Object.keys(byLevel).map(Number).sort((a, b) => a - b)
     if (levels.length === 0) {
-      container.innerHTML = "<h2>Spells</h2><p class='hint'>No leveled spells listed.</p>"
+      container.innerHTML = "<p class='hint'>No tienes conjuros disponibles a tu nivel actual.</p>"
       return
     }
+
+    const tabs = document.createElement("div")
+    tabs.className = "spell-level-tabs"
+    tabs.setAttribute("role", "tablist")
+    tabs.setAttribute("aria-label", "Niveles de conjuros")
+
+    const panels = document.createElement("div")
+    panels.className = "spell-level-panels"
+
+    if (!levels.includes(activeSpellLevel)) activeSpellLevel = levels[0]
+
     levels.forEach((lvl) => {
-      const head = document.createElement("h2")
-      head.textContent = ordinal(lvl) + " Level Spells"
-      container.appendChild(head)
+      const isActive = lvl === activeSpellLevel
+      const tab = document.createElement("button")
+      tab.type = "button"
+      tab.className = "spell-level-tab" + (isActive ? " active" : "")
+      tab.textContent = lvl === 0 ? "Nivel 0" : `Nivel ${lvl}`
+      tab.setAttribute("role", "tab")
+      tab.setAttribute("aria-selected", isActive ? "true" : "false")
+      tab.dataset.level = String(lvl)
+
+      const panel = document.createElement("div")
+      panel.className = "spell-level-panel" + (isActive ? " active" : "")
+      panel.dataset.level = String(lvl)
+      panel.setAttribute("role", "tabpanel")
+
+      const head = document.createElement("div")
+      head.className = "spell-level-head"
+
+      if (lvl === 0) {
+        const known = byLevel[lvl].filter((sp) => sp.known && !sp.alwaysKnown).length
+        head.innerHTML = `
+          <h2>Trucos</h2>
+          <span class="spell-prepared-counter">${known}/${getMaxCantrips()} conocidos</span>
+        `
+      } else {
+        const alwaysAtLevel = byLevel[lvl].filter((sp) => sp.alwaysPrepared).length
+        head.innerHTML = `
+          <h2>Nivel ${lvl}</h2>
+          <span class="spell-prepared-counter">${getPreparedCount()}/${getMaxPrepared()} preparados en total${alwaysAtLevel ? ` · ${alwaysAtLevel} siempre preparados` : ""}</span>
+        `
+      }
+
+      panel.appendChild(head)
+
       const list = document.createElement("div")
       list.className = "spell-list"
       byLevel[lvl].forEach((sp) => list.appendChild(spellItem(sp)))
-      container.appendChild(list)
+      panel.appendChild(list)
+
+      tab.addEventListener("click", () => {
+        activeSpellLevel = lvl
+        tabs.querySelectorAll(".spell-level-tab").forEach((t) => {
+          const active = t === tab
+          t.classList.toggle("active", active)
+          t.setAttribute("aria-selected", active ? "true" : "false")
+        })
+        panels.querySelectorAll(".spell-level-panel").forEach((p) => {
+          p.classList.toggle("active", p === panel)
+        })
+      })
+
+      tabs.appendChild(tab)
+      panels.appendChild(panel)
     })
+
+    container.appendChild(tabs)
+    container.appendChild(panels)
   }
 
   function ordinal(n) {
@@ -418,23 +604,33 @@
 
   function openSpellModal(sp) {
     modalContent.innerHTML = `
-      <button class="modal-close" aria-label="Close">&times;</button>
+      <button class="modal-close" aria-label="Cerrar">&times;</button>
       <h2>${sp.name}</h2>
-      <div class="m-sub">${sp.level === 0 ? sp.school + " cantrip" : ordinal(sp.level) + "-level " + (sp.school || "")}</div>
+      <div class="m-sub">${sp.level === 0 ? (sp.school || "") + " · Truco" : "Nivel " + sp.level + " · " + (sp.school || "")}${sp.subclass ? " · " + sp.subclass : ""}</div>
       <div class="m-meta">
-        <div><div class="k">Casting Time</div>${sp.castingTime || "—"}</div>
-        <div><div class="k">Range</div>${sp.range || "—"}</div>
-        <div><div class="k">Components</div>${sp.components || "—"}</div>
-        <div><div class="k">Duration</div>${sp.duration || "—"}</div>
+        <div><div class="k">Tiempo de lanzamiento</div>${sp.castingTime || "—"}</div>
+        <div><div class="k">Alcance</div>${sp.range || "—"}</div>
+        <div><div class="k">Componentes</div>${sp.components || "—"}</div>
+        <div><div class="k">Duración</div>${sp.duration || "—"}</div>
       </div>
-      <div class="m-desc">${sp.description || "No description provided."}</div>`
+      <div class="m-desc">${sp.description || "No hay descripción disponible."}</div>`
+    modalContent.querySelector(".modal-close").addEventListener("click", closeModal)
+    backdrop.classList.add("open")
+  }
+
+  function openMagicPlanModal(plan) {
+    modalContent.innerHTML = `
+      <button class="modal-close" aria-label="Cerrar">&times;</button>
+      <h2>${plan.name}</h2>
+      <div class="m-sub">Plan disponible desde nivel ${plan.minLevel} · ${plan.attunement === "Sí" ? "Requiere sintonización" : plan.attunement === "No" ? "No requiere sintonización" : "Sintonización variable"}</div>
+      <div class="m-desc">${plan.description || "No hay descripción disponible."}</div>`
     modalContent.querySelector(".modal-close").addEventListener("click", closeModal)
     backdrop.classList.add("open")
   }
 
   function openTextModal(title, sub, html) {
     modalContent.innerHTML = `
-      <button class="modal-close" aria-label="Close">&times;</button>
+      <button class="modal-close" aria-label="Cerrar">&times;</button>
       <h2>${title}</h2>
       ${sub ? `<div class="m-sub">${sub}</div>` : ""}
       <div class="m-desc">${html}</div>`
@@ -452,16 +648,135 @@
     if (e.key === "Escape") closeModal()
   })
 
+  /* ---------- Magic Item Plans ---------- */
+  const PLANS_KNOWN_BY_LEVEL = {
+    1: 0, 2: 4, 3: 4, 4: 4, 5: 4,
+    6: 5, 7: 5, 8: 5, 9: 5,
+    10: 6, 11: 6, 12: 6, 13: 6,
+    14: 7, 15: 7, 16: 7, 17: 7,
+    18: 8, 19: 8, 20: 8,
+  }
+
+  function getMaxMagicItemPlans() {
+    const level = Math.max(1, Math.min(20, Number(C.level) || 1))
+    return PLANS_KNOWN_BY_LEVEL[level] || 0
+  }
+
+  function getKnownMagicItemPlans() {
+    return (C.magicItemPlans || []).filter((plan) => plan.known).length
+  }
+
+  function toggleMagicItemPlan(plan) {
+    if (plan.minLevel > C.level) return
+
+    if (plan.known) {
+      plan.known = false
+      renderMagicItemPlans()
+      saveState()
+      return
+    }
+
+    const max = getMaxMagicItemPlans()
+    const current = getKnownMagicItemPlans()
+    if (current >= max) {
+      openTextModal(
+        "Límite de planes",
+        `${current}/${max} planes conocidos`,
+        `No puedes aprender más planes a tu nivel actual. Olvida uno de los planes conocidos antes de aprender <strong>${plan.name}</strong>.`
+      )
+      return
+    }
+
+    plan.known = true
+    renderMagicItemPlans()
+    saveState()
+  }
+
+  function renderMagicItemPlans() {
+    const list = document.getElementById("magicItemPlansList")
+    if (!list) return
+    list.innerHTML = ""
+
+    const plans = C.magicItemPlans || []
+    const max = getMaxMagicItemPlans()
+    const known = getKnownMagicItemPlans()
+    const level = Number(C.level) || 1
+
+    document.getElementById("plansKnownCount").textContent = known
+    document.getElementById("plansMaxCount").textContent = max
+    document.getElementById("plansLevel").textContent = level
+
+    // Solo mostramos los planes que el personaje puede aprender ahora.
+    const availablePlans = plans.filter((plan) => level >= Number(plan.minLevel || 1))
+    const levels = [...new Set(availablePlans.map((p) => p.minLevel))].sort((a, b) => a - b)
+
+    if (!availablePlans.length) {
+      list.innerHTML = '<p class="hint">No tienes planes de objetos mágicos disponibles a tu nivel actual.</p>'
+      return
+    }
+
+    levels.forEach((minLevel) => {
+      const section = document.createElement("div")
+      section.className = "magic-plan-section"
+
+      const heading = document.createElement("div")
+      heading.className = "magic-plan-heading"
+      heading.innerHTML = `<h3>Planes disponibles desde nivel ${minLevel}</h3><span class="plan-status available">Disponibles</span>`
+      section.appendChild(heading)
+
+      const grid = document.createElement("div")
+      grid.className = "magic-plan-list"
+
+      availablePlans.filter((p) => p.minLevel === minLevel).forEach((plan) => {
+        const item = document.createElement("div")
+        item.className = "magic-plan-item" + (plan.known ? " known" : "")
+        item.innerHTML = `
+          <button type="button" class="magic-plan-info" aria-label="Ver descripción de ${plan.name}">
+            <span class="magic-plan-main">
+              <span class="magic-plan-name">${plan.name}</span>
+              ${plan.repeatable ? '<span class="magic-plan-note">Se puede aprender varias veces</span>' : ""}
+            </span>
+            <span class="magic-plan-meta">${plan.attunement === "Sí" ? "Requiere sintonización" : plan.attunement === "No" ? "Sin sintonización" : "Sintonización variable"}</span>
+          </button>
+          <button type="button" class="magic-plan-check" aria-pressed="${plan.known ? "true" : "false"}">${plan.known ? "✓ Conocido" : "Aprender"}</button>`
+        item.querySelector(".magic-plan-info").addEventListener("click", () => openMagicPlanModal(plan))
+        item.querySelector(".magic-plan-check").addEventListener("click", () => toggleMagicItemPlan(plan))
+        grid.appendChild(item)
+      })
+
+      section.appendChild(grid)
+      list.appendChild(section)
+    })
+  }
+
   /* ---------- Features & Steel Defender ---------- */
   function renderFeatures() {
     const list = document.getElementById("featuresList")
     list.innerHTML = ""
-    ;(C.features || []).forEach((f) => {
+    ;(C.features || []).filter((f) => Number(f.minLevel || 1) <= Number(C.level || 1)).forEach((f) => {
       const div = document.createElement("div")
-      div.className = "feature"
+      div.className = "feature" + (Array.isArray(f.creations) && f.creations.length ? " feature-clickable" : "")
       div.innerHTML = `
         <h3>${f.name}<span class="src">${f.source || ""}</span></h3>
-        <p>${f.description || ""}</p>`
+        <p>${f.description || ""}</p>
+        ${Array.isArray(f.creations) && f.creations.length ? `
+          <div class="feature-hint">Clica per veure què pots crear <span aria-hidden="true">▾</span></div>
+          <div class="feature-creations" hidden>
+            <div class="creation-list">${f.creations.map((item) => `<span class="creation-item">${item}</span>`).join("")}</div>
+          </div>` : ""}`
+
+      if (Array.isArray(f.creations) && f.creations.length) {
+        div.addEventListener("click", () => {
+          const details = div.querySelector(".feature-creations")
+          const hint = div.querySelector(".feature-hint")
+          const open = details.hidden
+          details.hidden = !open
+          div.classList.toggle("expanded", open)
+          hint.innerHTML = open
+            ? 'Clica per ocultar els objectes <span aria-hidden="true">▴</span>'
+            : 'Clica per veure què pots crear <span aria-hidden="true">▾</span>'
+        })
+      }
       list.appendChild(div)
     })
   }
@@ -470,7 +785,7 @@
     const d = C.steelDefender
     const card = document.getElementById("defenderCard")
     if (!d) {
-      card.style.display = "none"
+      card.style.display = "ninguno"
       return
     }
     document.getElementById("defenderName").textContent = d.name || "Steel Defender"
@@ -487,15 +802,15 @@
 
     const meta = document.getElementById("defenderMeta")
     meta.innerHTML = `
-      <div class="def-line"><strong>Size:</strong> ${d.size || "—"}</div>
-      <div class="def-line"><strong>Armor Class:</strong> ${d.armorClass} &nbsp; <strong>Hit Points:</strong> ${d.hitPoints} &nbsp; <strong>Speed:</strong> ${d.speed || "—"}</div>
-      <div class="def-line"><strong>Saving Throws:</strong> ${d.savingThrows || "—"}</div>
-      <div class="def-line"><strong>Damage Immunities:</strong> ${d.damageImmunities || "—"}</div>
-      <div class="def-line"><strong>Condition Immunities:</strong> ${d.conditionImmunities || "—"}</div>
-      <div class="def-line"><strong>Senses:</strong> ${d.senses || "—"}</div>`
+      <div class="def-line"><strong>Tamaño:</strong> ${d.size || "—"}</div>
+      <div class="def-line"><strong>Clase de Armadura:</strong> ${d.armorClass} &nbsp; <strong>Puntos de Golpe:</strong> ${d.hitPoints} &nbsp; <strong>Velocidad:</strong> ${d.speed || "—"}</div>
+      <div class="def-line"><strong>Salvaciones:</strong> ${d.savingThrows || "—"}</div>
+      <div class="def-line"><strong>Inmunidades al daño:</strong> ${d.damageImmunities || "—"}</div>
+      <div class="def-line"><strong>Inmunidades a condiciones:</strong> ${d.conditionImmunities || "—"}</div>
+      <div class="def-line"><strong>Sentidos:</strong> ${d.senses || "—"}</div>`
 
     const traits = document.getElementById("defenderTraits")
-    traits.innerHTML = "<h3 style='color:var(--gold);font-size:1rem;margin-bottom:6px'>Traits</h3>"
+    traits.innerHTML = "<h3 style='color:var(--gold);font-size:1rem;margin-bottom:6px'>Rasgos</h3>"
     ;(d.traits || []).forEach((t) => {
       const p = document.createElement("p")
       p.className = "def-line"
@@ -504,7 +819,7 @@
     })
 
     const actions = document.getElementById("defenderActions")
-    actions.innerHTML = "<h3 style='color:var(--gold);font-size:1rem;margin-bottom:6px'>Actions</h3>"
+    actions.innerHTML = "<h3 style='color:var(--gold);font-size:1rem;margin-bottom:6px'>Acciones</h3>"
     ;(d.actions || []).forEach((a) => {
       const p = document.createElement("p")
       p.className = "def-line"
@@ -559,6 +874,7 @@
     renderSlots()
     saveState()
   })
+  renderMagicItemPlans()
   renderFeatures()
   renderDefender()
   setupTabs()

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#10231a" />
     <title>D&D Character Sheet</title>
-    <meta name="description" content="Offline Dungeons & Dragons character sheet with live modifiers, combat, spells and features." />
+    <meta name="description" content="Hoja de personaje de Dungeons & Dragons sin conexión, con modificadores, combate, conjuros y rasgos." />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -24,6 +24,7 @@
         <button class="tab active" data-tab="overview" role="tab">Atributos</button>
         <button class="tab" data-tab="combat" role="tab">Combate</button>
         <button class="tab" data-tab="spells" role="tab">Hechizos</button>
+        <button class="tab" data-tab="plans" role="tab">Planes</button>
         <button class="tab" data-tab="features" role="tab">Rasgos</button>
       </nav>
 
@@ -101,13 +102,13 @@
         </div>
 
         <div class="card section-gap">
-          <h2>Weapons &amp; Attacks</h2>
+          <h2>Armas y ataques</h2>
           <div style="overflow-x:auto;">
             <table>
               <thead>
                 <tr>
                   <th>Weapon</th>
-                  <th>Attack</th>
+                  <th>Ataque</th>
                   <th>Damage</th>
                   <th>Range</th>
                   <th>Properties</th>
@@ -116,20 +117,20 @@
               <tbody id="weaponsBody"></tbody>
             </table>
           </div>
-          <p class="hint">Attack bonus = ability modifier + proficiency (if proficient) + magic bonus. Battle Smith magic weapons use Intelligence.</p>
+          <p class="hint">Bonificador al ataque = modificador de característica + competencia (si eres competente) + bonificador mágico. Las armas mágicas del Herrero de Guerra usan Inteligencia.</p>
         </div>
       </section>
 
-      <!-- Spells -->
+      <!-- Conjuros -->
       <section class="panel" id="spells" role="tabpanel">
         <div class="combat-top">
           <div class="stat-box">
             <div class="big" id="spellDC">10</div>
-            <div class="cap">Spell Save DC</div>
+            <div class="cap">CD de salvación de conjuros</div>
           </div>
           <div class="stat-box">
             <div class="big" id="spellAtk">+0</div>
-            <div class="cap">Spell Attack</div>
+            <div class="cap">Ataque de conjuro</div>
           </div>
           <div class="stat-box">
             <div class="big" id="spellAbility">INT</div>
@@ -137,34 +138,53 @@
           </div>
           <div class="stat-box">
             <div class="big" id="preparedCount">0</div>
-            <div class="cap">Prepared</div>
+            <div class="cap">Preparados</div>
           </div>
         </div>
 
         <div class="card">
-          <h2>Spell Slots</h2>
+          <h2>Espacios de conjuro</h2>
           <div id="slotsContainer"></div>
-          <button class="btn" id="resetSlots" style="margin-top:8px;">Reset Slots (Long Rest)</button>
-        </div>
-
-        <div class="card section-gap">
-          <h2>Cantrips</h2>
-          <div class="spell-list" id="cantripList"></div>
+          <button class="btn" id="resetSlots" style="margin-top:8px;">Restablecer espacios (Descanso Largo)</button>
         </div>
 
         <div class="card section-gap" id="spellsByLevel"></div>
-        <p class="hint">Tap any spell to see its full description.</p>
+        <p class="hint">Pulsa el nombre de un hechizo para ver su descripción. Usa Preparar/Despreparar para elegir tus conjuros. El límite se controla automáticamente.</p>
+      </section>
+
+      <!-- Planes de objetos mágicos -->
+      <section class="panel" id="plans" role="tabpanel">
+        <div class="combat-top">
+          <div class="stat-box">
+            <div class="big" id="plansKnownCount">0</div>
+            <div class="cap">Planes conocidos</div>
+          </div>
+          <div class="stat-box">
+            <div class="big" id="plansMaxCount">0</div>
+            <div class="cap">Máximo a tu nivel</div>
+          </div>
+          <div class="stat-box">
+            <div class="big" id="plansLevel">1</div>
+            <div class="cap">Nivel de Artífice</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Planes de objetos mágicos</h2>
+          <p class="hint">Selecciona los planes que conoces. Los planes se desbloquean automáticamente al subir de nivel y el máximo de planes conocidos se controla según tu nivel de Artífice.</p>
+          <div id="magicItemPlansList"></div>
+        </div>
       </section>
 
       <!-- Features -->
       <section class="panel" id="features" role="tabpanel">
         <div class="card">
-          <h2>Class Features &amp; Perks</h2>
+          <h2>Rasgos de clase</h2>
           <div id="featuresList"></div>
         </div>
 
         <div class="card defender section-gap" id="defenderCard">
-          <h2 id="defenderName">Steel Defender</h2>
+          <h2 id="defenderName">Compañero de Acero</h2>
           <div class="def-stats" id="defenderStats"></div>
           <div id="defenderMeta"></div>
           <div class="section-gap" id="defenderTraits"></div>
@@ -173,11 +193,11 @@
       </section>
 
       <footer class="hint" style="text-align:center;padding:20px 0;">
-        Edit <code>character-data.js</code> to change your character. Works fully offline — just open index.html.
+        Edita <code>character-data.js</code> para cambiar tu personaje. Funciona sin conexión: abre <code>index.html</code>.
       </footer>
     </div>
 
-    <!-- Modal for spell / detail popups -->
+    <!-- Ventana de detalle de conjuros y objetos -->
     <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
       <div class="modal" id="modalContent"></div>
     </div>
