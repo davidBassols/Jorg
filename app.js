@@ -21,6 +21,8 @@
   const usedSlots = {} // { level: numberUsed }
   let currentHp = C.maxHp
   let tempHp = 0
+  let defenderHp = null
+  let defenderTempHp = 0
   let equippedArmorIndex = (C.armor || []).findIndex((a) => a.equipped)
   let equippedShieldIndex = (C.shields || []).findIndex((s) => s.equipped)
   let activeSpellLevel = 0
@@ -33,23 +35,23 @@
     animalHandling: { ability: "wis", label: "Trato con animales" },
     arcana: { ability: "int", label: "Arcano" },
     athletics: { ability: "str", label: "Atletismo" },
-    deception: { ability: "cha", label: "Deception" },
-    history: { ability: "int", label: "History" },
-    insight: { ability: "wis", label: "Insight" },
-    intimidation: { ability: "cha", label: "Intimidation" },
-    investigation: { ability: "int", label: "Investigation" },
-    medicine: { ability: "wis", label: "Medicine" },
-    nature: { ability: "int", label: "Nature" },
-    perception: { ability: "wis", label: "Perception" },
-    performance: { ability: "cha", label: "Performance" },
-    persuasion: { ability: "cha", label: "Persuasion" },
-    religion: { ability: "int", label: "Religion" },
-    sleightOfHand: { ability: "dex", label: "Sleight of Hand" },
-    stealth: { ability: "dex", label: "Stealth" },
-    survival: { ability: "wis", label: "Survival" },
+    deception: { ability: "cha", label: "Engaño" },
+    history: { ability: "int", label: "Historia" },
+    insight: { ability: "wis", label: "Perspicacia" },
+    intimidation: { ability: "cha", label: "Intimidación" },
+    investigation: { ability: "int", label: "Investigación" },
+    medicine: { ability: "wis", label: "Medicina" },
+    nature: { ability: "int", label: "Naturaleza" },
+    perception: { ability: "wis", label: "Percepción" },
+    performance: { ability: "cha", label: "Interpretación" },
+    persuasion: { ability: "cha", label: "Persuasión" },
+    religion: { ability: "int", label: "Religión" },
+    sleightOfHand: { ability: "dex", label: "Juego de Manos" },
+    stealth: { ability: "dex", label: "Sigilo" },
+    survival: { ability: "wis", label: "Supervivencia" },
   }
   const ABILITY_ORDER = ["str", "dex", "con", "int", "wis", "cha"]
-  const ABILITY_LABEL = { str: "Fuerza", dex: "Destreza", con: "Constitucion", int: "Inteligencia", wis: "Sabiduria", cha: "Carisma" }
+  const ABILITY_LABEL = { str: "Fuerza", dex: "Destreza", con: "Constitución", int: "Inteligencia", wis: "Sabiduría", cha: "Carisma" }
 
   const mod = (score) => Math.floor((score - 10) / 2)
   const fmt = (n) => (n >= 0 ? "+" + n : "" + n)
@@ -62,6 +64,8 @@
       const s = JSON.parse(raw)
       if (typeof s.currentHp === "number") currentHp = s.currentHp
       if (typeof s.tempHp === "number") tempHp = s.tempHp
+      if (typeof s.defenderHp === "number") defenderHp = s.defenderHp
+      if (typeof s.defenderTempHp === "number") defenderTempHp = s.defenderTempHp
       if (s.usedSlots) Object.assign(usedSlots, s.usedSlots)
       if (Array.isArray(s.preparedSpells)) {
         const preparedKeys = new Set(s.preparedSpells)
@@ -90,7 +94,7 @@
       const knownMagicItemPlans = (C.magicItemPlans || [])
         .filter((plan) => plan.known)
         .map((plan) => plan.name)
-      localStorage.setItem(STORE_KEY, JSON.stringify({ currentHp, tempHp, usedSlots, preparedSpells, knownMagicItemPlans }))
+      localStorage.setItem(STORE_KEY, JSON.stringify({ currentHp, tempHp, defenderHp, defenderTempHp, usedSlots, preparedSpells, knownMagicItemPlans }))
     } catch (e) {
       console.log("[v0] Could not save state:", e.message)
     }
@@ -161,7 +165,7 @@
         li.innerHTML = `
           <span class="name">
             <span class="dot ${exp ? "expertise" : prof ? "filled" : ""}"></span>
-            ${info.label} <span class="abbr">${info.ability}</span>
+            ${info.label} <span class="abbr">${ABILITY_LABEL[info.ability]}</span>
           </span>
           <span class="val">${fmt(bonus)}</span>`
         list.appendChild(li)
@@ -172,7 +176,7 @@
   function computeAC() {
     const dexMod = mod(abilities.dex)
     let base = 10 + dexMod
-    let label = "Unarmored (10 + Dex)"
+    let label = "Sin armadura (10 + Des)"
     const armor = C.armor && C.armor[equippedArmorIndex]
     if (armor) {
       if (armor.category === "light") {
@@ -181,10 +185,10 @@
       } else if (armor.category === "medium") {
         const capped = Math.min(dexMod, 2)
         base = armor.baseAC + capped
-        label = `${armor.name} (${armor.baseAC} + Dex ${fmt(capped)}, max +2)`
+        label = `${armor.name} (${armor.baseAC} + Dex ${fmt(capped)}, máx. +2)`
       } else {
         base = armor.baseAC
-        label = `${armor.name} (${armor.baseAC}, no Dex)`
+        label = `${armor.name} (${armor.baseAC}, sin Des)`
       }
     }
     let shieldBonus = 0
@@ -261,7 +265,7 @@
         <td>
           <strong>${w.name}</strong>
           <div class="s-meta" style="font-size:.72rem;color:var(--muted)">
-            ${abil.key.toUpperCase()}${w.useIntForAttack ? " (Preparado para la batalla)" : ""}${w.proficient ? " · competente" : ""}
+            ${abil.key.toUpperCase()}${w.useIntForAttack ? " (Preparado para la Batalla)" : ""}${w.proficient ? " · competente" : ""}
           </div>
         </td>
         <td><span class="attack">${fmt(attack)}</span></td>
@@ -398,7 +402,7 @@ function renderSpellStats() {
     const spellMod = mod(abilities[abil])
     document.getElementById("spellDC").textContent = 8 + pb + spellMod
     document.getElementById("spellAtk").textContent = fmt(pb + spellMod)
-    document.getElementById("spellAbility").textContent = abil.toUpperCase()
+    document.getElementById("spellAbility").textContent = ABILITY_LABEL[abil] || abil.toUpperCase()
     const prepared = getPreparedCount()
     const alwaysPrepared = (C.spells || []).filter((s) => {
       const level = Number(s.level || 0)
@@ -450,7 +454,7 @@ function renderSpellStats() {
     const wrapper = document.createElement("div")
     wrapper.className = "spell-item" + (sp.prepared ? " prepared" : "")
 
-    const metaParts = [sp.subclass || "", sp.school, sp.castingTime, sp.range].filter(Boolean)
+    const metaParts = [sp.subclass || "", sp.school, sp.castingTime, sp.range, sp.components, sp.duration].filter(Boolean)
     const info = document.createElement("button")
     info.type = "button"
     info.className = "spell-info"
@@ -753,7 +757,13 @@ function renderSpellStats() {
   function renderFeatures() {
     const list = document.getElementById("featuresList")
     list.innerHTML = ""
-    ;(C.features || []).filter((f) => Number(f.minLevel || 1) <= Number(C.level || 1)).forEach((f) => {
+    const dwarfFeatures = C.race === "Enano" ? [
+      { minLevel: 1, name: "Visión en la Oscuridad", source: "Especie · Enano", description: "Tienes visión en la oscuridad hasta 120 pies." },
+      { minLevel: 1, name: "Resiliencia Enana", source: "Especie · Enano", description: "Tienes resistencia al daño de veneno y ventaja en las tiradas de salvación para evitar o terminar el estado Envenenado." },
+      { minLevel: 1, name: "Dureza Enana", source: "Especie · Enano", description: "Tus puntos de golpe máximos aumentan en 1, y vuelven a aumentar en 1 cada vez que ganas un nivel." },
+      { minLevel: 1, name: "Conocimiento de la Piedra", source: "Especie · Enano", description: "Como acción adicional, obtienes sentido de las vibraciones a 60 pies durante 10 minutos mientras estés sobre piedra o tocando piedra. Puedes usarlo un número de veces igual a tu bonificador de competencia y recuperas todos los usos tras un descanso largo." },
+    ] : []
+    ;([...(C.features || []), ...dwarfFeatures]).filter((f) => Number(f.minLevel || 1) <= Number(C.level || 1)).forEach((f) => {
       const div = document.createElement("div")
       div.className = "feature" + (Array.isArray(f.creations) && f.creations.length ? " feature-clickable" : "")
       div.innerHTML = `
@@ -781,51 +791,101 @@ function renderSpellStats() {
     })
   }
 
+  function getDefenderMaxHp() {
+    return 5 + 5 * (Number(C.level) || 1)
+  }
+
+  function renderDefenderHp() {
+    const max = getDefenderMaxHp()
+    if (defenderHp == null) defenderHp = max
+    defenderHp = Math.max(0, Math.min(defenderHp, max))
+    document.getElementById("defenderHpCurrent").textContent = defenderHp
+    document.getElementById("defenderHpMax").textContent = max
+    document.getElementById("defenderHpBar").style.width = (max ? defenderHp / max * 100 : 0) + "%"
+    const slider = document.getElementById("defenderHpSlider")
+    slider.max = max
+    slider.value = defenderHp
+  }
+
+  function setupDefenderHpControls() {
+    const slider = document.getElementById("defenderHpSlider")
+    const amount = document.getElementById("defenderHpAmount")
+    slider.addEventListener("input", () => { defenderHp = Number(slider.value); renderDefenderHp(); saveState() })
+    document.getElementById("defenderHpDamage").addEventListener("click", () => { defenderHp = Math.max(0, defenderHp - Math.max(0, parseInt(amount.value, 10) || 0)); renderDefenderHp(); saveState() })
+    document.getElementById("defenderHpHeal").addEventListener("click", () => { defenderHp = Math.min(getDefenderMaxHp(), defenderHp + Math.max(0, parseInt(amount.value, 10) || 0)); renderDefenderHp(); saveState() })
+    document.getElementById("defenderHpFull").addEventListener("click", () => { defenderHp = getDefenderMaxHp(); defenderTempHp = 0; renderDefenderHp(); saveState() })
+  }
+
   function renderDefender() {
     const d = C.steelDefender
     const card = document.getElementById("defenderCard")
-    if (!d) {
-      card.style.display = "ninguno"
-      return
-    }
-    document.getElementById("defenderName").textContent = d.name || "Steel Defender"
-
+    if (!d) { card.style.display = "none"; return }
+    document.getElementById("defenderName").textContent = d.name || "Thorek"
     const stats = document.getElementById("defenderStats")
     stats.innerHTML = ""
     ABILITY_ORDER.forEach((key) => {
       const score = d.abilities ? d.abilities[key] : 10
       const cell = document.createElement("div")
       cell.className = "def-stat"
-      cell.innerHTML = `<div class="l">${key}</div><div class="v">${score} <span style="font-size:.8rem">(${fmt(mod(score))})</span></div>`
+      cell.innerHTML = `<div class="l">${ABILITY_LABEL[key]}</div><div class="v">${score} <span style="font-size:.8rem">(${fmt(mod(score))})</span></div>`
       stats.appendChild(cell)
     })
-
+    const spellAttack = pb + mod(abilities.int)
+    const defenderAC = 12 + mod(abilities.int)
     const meta = document.getElementById("defenderMeta")
     meta.innerHTML = `
       <div class="def-line"><strong>Tamaño:</strong> ${d.size || "—"}</div>
-      <div class="def-line"><strong>Clase de Armadura:</strong> ${d.armorClass} &nbsp; <strong>Puntos de Golpe:</strong> ${d.hitPoints} &nbsp; <strong>Velocidad:</strong> ${d.speed || "—"}</div>
-      <div class="def-line"><strong>Salvaciones:</strong> ${d.savingThrows || "—"}</div>
+      <div class="def-line"><strong>Clase de Armadura:</strong> ${defenderAC} &nbsp; <strong>Puntos de Golpe:</strong> ${getDefenderMaxHp()} &nbsp; <strong>Velocidad:</strong> ${d.speed || "—"}</div>
+      <div class="def-line"><strong>Tiradas de salvación:</strong> ${d.savingThrows || "—"}</div>
       <div class="def-line"><strong>Inmunidades al daño:</strong> ${d.damageImmunities || "—"}</div>
       <div class="def-line"><strong>Inmunidades a condiciones:</strong> ${d.conditionImmunities || "—"}</div>
-      <div class="def-line"><strong>Sentidos:</strong> ${d.senses || "—"}</div>`
-
+      <div class="def-line"><strong>Sentidos:</strong> ${d.senses || "—"}</div>
+      <div class="def-line"><strong>Bonificador de ataque de Thorek:</strong> ${fmt(spellAttack)} (usa tu ataque de conjuro)</div>`
+    document.getElementById("defenderAc").textContent = defenderAC
+    document.getElementById("defenderSpeed").textContent = String(d.speed || "").replace(/[^0-9]/g, "") || "40"
     const traits = document.getElementById("defenderTraits")
     traits.innerHTML = "<h3 style='color:var(--gold);font-size:1rem;margin-bottom:6px'>Rasgos</h3>"
-    ;(d.traits || []).forEach((t) => {
-      const p = document.createElement("p")
-      p.className = "def-line"
-      p.innerHTML = `<strong>${t.name}.</strong> ${t.description}`
-      traits.appendChild(p)
-    })
-
+    ;(d.traits || []).forEach((t) => { const p = document.createElement("p"); p.className = "def-line"; p.innerHTML = `<strong>${t.name}.</strong> ${t.description}`; traits.appendChild(p) })
     const actions = document.getElementById("defenderActions")
-    actions.innerHTML = "<h3 style='color:var(--gold);font-size:1rem;margin-bottom:6px'>Acciones</h3>"
+    actions.innerHTML = "<h3 style='color:var(--gold);font-size:1rem;margin-bottom:6px'>Acciones y reacciones</h3>"
     ;(d.actions || []).forEach((a) => {
-      const p = document.createElement("p")
-      p.className = "def-line"
-      p.innerHTML = `<strong>${a.name}.</strong> ${a.description}`
-      actions.appendChild(p)
+      let desc = a.description
+      if (a.name.startsWith("Desgarro")) desc = `Ataque cuerpo a cuerpo: <strong>${fmt(spellAttack)}</strong> al ataque, alcance 5 pies, un objetivo. Impacto: <strong>1d8 + ${2 + mod(abilities.int)}</strong> de daño de fuerza.`
+      if (a.name.startsWith("Reparar")) desc = `Thorek, o un constructo u objeto que pueda ver a 5 pies, recupera <strong>2d8 + ${mod(abilities.int)}</strong> puntos de golpe. 3 usos al día.`
+      const p = document.createElement("p"); p.className = "def-line"; p.innerHTML = `<strong>${a.name}.</strong> ${desc}`; actions.appendChild(p)
     })
+    renderDefenderHp()
+  }
+
+  function renderItems() {
+    const list = document.getElementById("itemsList")
+    if (!list) return
+    list.innerHTML = ""
+    const normalItems = C.equipment || []
+    const magicItems = C.magicItems || []
+
+    const addSection = (title, items, emptyText, magic = false) => {
+      const section = document.createElement("div")
+      section.className = "items-section"
+      const h = document.createElement("h3")
+      h.className = "items-heading"
+      h.textContent = title
+      section.appendChild(h)
+      if (!items.length) {
+        const p = document.createElement("p"); p.className = "hint"; p.textContent = emptyText; section.appendChild(p); list.appendChild(section); return
+      }
+      items.forEach((item) => {
+        const obj = typeof item === "string" ? { name: item } : item
+        const div = document.createElement("div")
+        div.className = "feature"
+        div.innerHTML = `<h3>${obj.name || "Objeto"}${magic && obj.type ? `<span class="src">${obj.type}</span>` : ""}</h3>${obj.description ? `<p>${obj.description}</p>` : `<p class="hint">Sin descripción.</p>`}${obj.attunement ? `<p class="hint">${obj.attunement}</p>` : ""}`
+        section.appendChild(div)
+      })
+      list.appendChild(section)
+    }
+
+    addSection("Equipo y objetos", normalItems, "No tienes objetos registrados.")
+    addSection("Objetos mágicos", magicItems, "No tienes objetos mágicos registrados.", true)
   }
 
   /* ---------- Recalc (everything that depends on abilities) ---------- */
@@ -877,5 +937,7 @@ function renderSpellStats() {
   renderMagicItemPlans()
   renderFeatures()
   renderDefender()
+  setupDefenderHpControls()
+  renderItems()
   setupTabs()
 })()

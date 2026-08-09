@@ -966,3 +966,10 @@ td .attack {
 .magic-plan-item.known .magic-plan-check {
   background: rgba(212, 175, 55, .14);
 }
+
+/* ===================== Inventario ===================== */
+.items-section { margin-top: 18px; }
+.items-section:first-child { margin-top: 4px; }
+.items-heading { color: var(--gold); font-size: 1rem; margin-bottom: 8px; }
+.defender-hp-card { margin-top: 16px; background: var(--surface-2); }
+.defender-combat-top { margin-top: 14px; }

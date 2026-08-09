@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-background">
+<html lang="es" class="bg-background">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,12 +20,14 @@
       </header>
 
       <!-- Tabs -->
-      <nav class="tabs" role="tablist" aria-label="Character sections">
+      <nav class="tabs" role="tablist" aria-label="Secciones del personaje">
         <button class="tab active" data-tab="overview" role="tab">Atributos</button>
         <button class="tab" data-tab="combat" role="tab">Combate</button>
         <button class="tab" data-tab="spells" role="tab">Hechizos</button>
         <button class="tab" data-tab="plans" role="tab">Planes</button>
         <button class="tab" data-tab="features" role="tab">Rasgos</button>
+        <button class="tab" data-tab="defender" role="tab">Thorek</button>
+        <button class="tab" data-tab="items" role="tab">Objetos</button>
       </nav>
 
       <!-- Overview / Attributes -->
@@ -79,24 +81,24 @@
           </div>
 
           <div class="card">
-            <h2>Hit Points</h2>
+            <h2>Puntos de golpe</h2>
             <div class="hp-numbers">
               <span id="hpCurrent">0</span> / <span id="hpMax">0</span>
               <span class="temp" id="hpTemp"></span>
             </div>
             <div class="hp-bar-outer"><div class="hp-bar-inner" id="hpBar"></div></div>
             <div class="hp-controls">
-              <input type="range" id="hpSlider" min="0" max="10" value="0" aria-label="Current hit points" />
+              <input type="range" id="hpSlider" min="0" max="10" value="0" aria-label="Puntos de golpe actuales" />
             </div>
             <div class="hp-controls">
-              <input type="number" id="hpAmount" value="1" min="1" aria-label="Amount" />
-              <button class="btn danger" id="hpDamage">− Damage</button>
-              <button class="btn heal" id="hpHeal">+ Heal</button>
+              <input type="number" id="hpAmount" value="1" min="1" aria-label="Cantidad" />
+              <button class="btn danger" id="hpDamage">− Daño</button>
+              <button class="btn heal" id="hpHeal">+ Curar</button>
             </div>
             <div class="hp-controls">
-              <input type="number" id="tempAmount" value="0" min="0" aria-label="Temp HP" />
-              <button class="btn" id="setTemp">Set Temp HP</button>
-              <button class="btn gold" id="hpFull">Full Rest</button>
+              <input type="number" id="tempAmount" value="0" min="0" aria-label="PG temporales" />
+              <button class="btn" id="setTemp">Establecer PG temporales</button>
+              <button class="btn gold" id="hpFull">Descanso largo</button>
             </div>
           </div>
         </div>
@@ -107,11 +109,11 @@
             <table>
               <thead>
                 <tr>
-                  <th>Weapon</th>
+                  <th>Arma</th>
                   <th>Ataque</th>
-                  <th>Damage</th>
-                  <th>Range</th>
-                  <th>Properties</th>
+                  <th>Daño</th>
+                  <th>Alcance</th>
+                  <th>Propiedades</th>
                 </tr>
               </thead>
               <tbody id="weaponsBody"></tbody>
@@ -134,7 +136,7 @@
           </div>
           <div class="stat-box">
             <div class="big" id="spellAbility">INT</div>
-            <div class="cap">Casting Ability</div>
+            <div class="cap">Aptitud mágica</div>
           </div>
           <div class="stat-box">
             <div class="big" id="preparedCount">0</div>
@@ -179,16 +181,39 @@
       <!-- Features -->
       <section class="panel" id="features" role="tabpanel">
         <div class="card">
-          <h2>Rasgos de clase</h2>
+          <h2>Rasgos de clase y especie</h2>
           <div id="featuresList"></div>
         </div>
+      </section>
 
-        <div class="card defender section-gap" id="defenderCard">
-          <h2 id="defenderName">Compañero de Acero</h2>
+      <!-- Steel Defender -->
+      <section class="panel" id="defender" role="tabpanel">
+        <div class="card defender" id="defenderCard">
+          <h2 id="defenderName">Thorek</h2>
           <div class="def-stats" id="defenderStats"></div>
+          <div class="combat-top defender-combat-top">
+            <div class="stat-box"><div class="big" id="defenderAc">15</div><div class="cap">Clase de armadura</div></div>
+            <div class="stat-box"><div class="big" id="defenderSpeed">40</div><div class="cap">Velocidad (pies)</div></div>
+          </div>
+          <div class="card defender-hp-card">
+            <h2>Puntos de golpe</h2>
+            <div class="hp-numbers"><span id="defenderHpCurrent">25</span> / <span id="defenderHpMax">25</span></div>
+            <div class="hp-bar-outer"><div class="hp-bar-inner" id="defenderHpBar"></div></div>
+            <div class="hp-controls"><input type="range" id="defenderHpSlider" min="0" max="25" value="25" aria-label="Puntos de golpe actuales de Thorek" /></div>
+            <div class="hp-controls"><input type="number" id="defenderHpAmount" value="1" min="1" aria-label="Cantidad" /><button class="btn danger" id="defenderHpDamage">− Daño</button><button class="btn heal" id="defenderHpHeal">+ Curar</button><button class="btn gold" id="defenderHpFull">PG completos</button></div>
+          </div>
           <div id="defenderMeta"></div>
           <div class="section-gap" id="defenderTraits"></div>
           <div class="section-gap" id="defenderActions"></div>
+        </div>
+      </section>
+
+      <!-- Items -->
+      <section class="panel" id="items" role="tabpanel">
+        <div class="card">
+          <h2>Objetos y objetos mágicos</h2>
+          <p class="hint">Añade tus objetos en <code>character-data.js</code>. Puedes incluir una descripción y si requieren sintonización.</p>
+          <div id="itemsList"></div>
         </div>
       </section>
 
